@@ -1,8 +1,58 @@
-import { Button, HaederContent, MainHeader, Table, TableContent, TextInput } from "Components"
-import { useState } from "react"
+import { Button, HaederContent, MainHeader, WrapperContent } from "Components"
+import { setContentType } from "Configs/Redux/reducers";
+import { useEffect, useState } from "react"
+import { useDispatch, useSelector } from "react-redux";
+import { GetAllDataKwitansi, GetDataKwitansiById } from "Services/KPD/Kwitansi";
+import { FormInput } from "./FormInput";
+import { View } from "./View";
 
 export const Kwitansi = () => {
-    const [contentType, setContentType] = useState('View');
+    const state = useSelector(state => state.root);
+    const dispatch = useDispatch();
+    const [listData, setListData] = useState([]);
+    const [data, setData] = useState(null);
+    const [isAddData, setIsAddData] = useState(false);
+
+    useEffect(() => {
+        if (isAddData) {
+            fetchAllData(1);
+        }
+    }, [isAddData]);
+
+    useEffect(() => {
+        fetchAllData(1);
+    }, []);
+
+    useEffect(() => {
+        if (state.contentType === 'Edit') {
+            fetchDataById(state.selectedId);
+            dispatch(setContentType('Edit'));
+        }
+    }, [dispatch, state.contentType, state.selectedId]);
+
+    const fetchDataById = async id => {
+        try {
+            const response = await GetDataKwitansiById(id);
+            if (response.data) {
+                setData(response.data.msg);
+            }
+        } catch (error) {
+            
+        }
+    }
+
+    const fetchAllData = async (value) => {
+        try {
+            const response = await GetAllDataKwitansi({page: value, perpage: 10});
+            if (response.data.result) {
+                setListData(response.data.result);
+            }
+        } catch (error) {
+            console.log(error);
+            setListData([]);
+        }
+    }
+
     return (
         <main>
             <MainHeader>
@@ -18,8 +68,8 @@ export const Kwitansi = () => {
                     <div>
                         <h1 className="title">Keuangan - Kwintansi SPPD</h1>
                         {
-                            contentType === 'Edit' ? null : (
-                                <Button onClick={() => setContentType('Edit')} className="gap-2 w-32" backgroundColor="bg-orange-500 mt-2">
+                            state.contentType === 'Edit' ? null : (
+                                <Button onClick={() => dispatch(setContentType('Add'))} className="gap-2 w-32" backgroundColor="bg-orange-500 mt-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                                         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                                     </svg>
@@ -31,37 +81,22 @@ export const Kwitansi = () => {
                 </HaederContent>
             </MainHeader>
 
-            <div className="wrapper-content">
-                <TextInput 
-                    placeholder="Cari Data"
-                />
-
-                <Table
-                    listLabel={[
-                        {id: 'no_kwt', name: 'Keperluan'},
-                        {id: 'nip', name: 'No Surat'},
-                        {id: 'nama', name: 'Lokasi'},
-                        {id: 'no_spd', name: 'No.SPD'},
-                        {id: 'no_spt', name: 'No.SPT'},
-                        {id: 'tgl_mulai', name: 'Tgl Mulai'},
-                        {id: 'tgl_selesai', name: 'Tgl Selesai'},
-                        {id: 'kegiatan', name: 'Kegiatan'},
-                        {id: 'aksi', name: 'Aksi'},
-                    ]}
-                >
-                    <tr>
-                        <TableContent>001-KWT-2023</TableContent>
-                        <TableContent>20029121</TableContent>
-                        <TableContent>Teti(Kadis Pertanian)</TableContent>
-                        <TableContent>001-SPD-2023</TableContent>
-                        <TableContent>05-Jan-2023</TableContent>
-                        <TableContent>05-Jan-2023</TableContent>
-                        <TableContent>05-Jan-2023</TableContent>
-                        <TableContent>Rakor Anggaran</TableContent>
-                        <TableContent>Action</TableContent>
-                    </tr>
-                </Table>
-            </div>
+            <WrapperContent withSearchInput={state.contentType === 'View' ? true : false}>
+                {
+                    state.contentType === 'View' || state.contentType === 'Delete' ? 
+                    <View 
+                        listData={listData}
+                    /> : 
+                    <FormInput
+                        contentType={state.contentType}
+                        item={data}
+                        onCallback={(value) => {
+                            setIsAddData(value.success)
+                            dispatch(setContentType('View'));
+                        }}
+                    />
+                }
+            </WrapperContent>
         </main>
     )
 }
